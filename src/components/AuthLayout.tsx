@@ -11,13 +11,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const isLoginPage = pathname === "/login";
+    const isPublicWidget = pathname === "/widget/chat";
+    const isPublicPage = isLoginPage || isPublicWidget;
 
     useEffect(() => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
 
-            if (!session && !isLoginPage) {
+            if (!session && !isPublicPage) {
                 router.replace("/login");
                 return;
             }
@@ -35,7 +38,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         // Listen for auth state changes (login/logout)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            if (!session && !isLoginPage) {
+            if (!session && !isPublicPage) {
                 router.replace("/login");
             } else if (session && isLoginPage) {
                 router.replace("/");
@@ -45,7 +48,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         });
 
         return () => subscription.unsubscribe();
-    }, [isLoginPage, router]);
+    }, [isPublicPage, isLoginPage, router]);
 
     // Show loading spinner while checking auth
     if (loading) {
@@ -56,8 +59,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         );
     }
 
-    // Login page: no sidebar/topbar
-    if (isLoginPage) {
+    // Public pages: no sidebar/topbar
+    if (isPublicPage) {
         return <>{children}</>;
     }
 
@@ -65,10 +68,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     if (authenticated) {
         return (
             <div className="flex h-screen overflow-hidden">
-                <Sidebar />
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onClose={() => setIsSidebarOpen(false)}
+                />
                 <div className="flex flex-col flex-1 overflow-hidden">
-                    <TopBar />
-                    <main className="flex-1 overflow-y-auto p-8">
+                    <TopBar onMenuClick={() => setIsSidebarOpen(true)} />
+                    <main className="flex-1 overflow-y-auto p-4 md:p-8">
                         {children}
                     </main>
                 </div>

@@ -6,7 +6,11 @@ import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { Interaction } from "@/types";
 
-export default function TopBar() {
+interface TopBarProps {
+    onMenuClick: () => void;
+}
+
+export default function TopBar({ onMenuClick }: TopBarProps) {
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -100,7 +104,10 @@ export default function TopBar() {
     return (
         <header className="h-16 border-b border-slate-200 bg-white px-8 flex items-center justify-between sticky top-0 z-20">
             <div className="flex items-center gap-4 flex-1">
-                <button className="lg:hidden text-slate-500 hover:text-slate-700">
+                <button
+                    onClick={onMenuClick}
+                    className="lg:hidden text-slate-500 hover:text-slate-700"
+                >
                     <Menu className="h-6 w-6" />
                 </button>
                 <div className="relative max-w-md w-full">

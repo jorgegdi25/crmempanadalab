@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Users, LogOut, BarChart3, Loader2, TrendingUp } from "lucide-react";
+import {
+    Building2, Users, LogOut, BarChart3, Loader2, TrendingUp,
+    MessageSquare, Copy, Code, Check
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
@@ -9,6 +12,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [userEmail, setUserEmail] = useState("");
+    const [copied, setCopied] = useState(false);
     const [stats, setStats] = useState({
         total: 0,
         closed: 0,
@@ -73,7 +77,7 @@ export default function SettingsPage() {
     const conversionRate = stats.total > 0 ? ((stats.closed / stats.total) * 100).toFixed(1) : "0";
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-12">
             <div>
                 <h1 className="text-2xl font-bold text-slate-900">Configuración</h1>
                 <p className="text-slate-500">Información de tu cuenta y estadísticas generales.</p>
@@ -146,7 +150,7 @@ export default function SettingsPage() {
                                 <h2 className="font-bold text-slate-900">Por Origen</h2>
                             </div>
                             <div className="p-6 space-y-4">
-                                {stats.bySource.map(item => (
+                                {stats.bySource.length > 0 ? stats.bySource.map(item => (
                                     <div key={item.source}>
                                         <div className="flex justify-between text-sm mb-1">
                                             <span className="font-medium text-slate-700">{item.source}</span>
@@ -159,7 +163,7 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                     </div>
-                                ))}
+                                )) : <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>}
                             </div>
                         </div>
 
@@ -169,7 +173,7 @@ export default function SettingsPage() {
                                 <h2 className="font-bold text-slate-900">Por Producto</h2>
                             </div>
                             <div className="p-6 space-y-4">
-                                {stats.byProduct.map(item => (
+                                {stats.byProduct.length > 0 ? stats.byProduct.map(item => (
                                     <div key={item.product}>
                                         <div className="flex justify-between text-sm mb-1">
                                             <span className="font-medium text-slate-700">{item.product}</span>
@@ -182,7 +186,72 @@ export default function SettingsPage() {
                                             />
                                         </div>
                                     </div>
-                                ))}
+                                )) : <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Widget Section */}
+                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <MessageSquare className="h-5 w-5 text-orange-600" />
+                                <h2 className="font-bold text-slate-900">Widget de Captura (Chat)</h2>
+                            </div>
+                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase">Activo</span>
+                        </div>
+                        <div className="p-6 space-y-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <Code className="h-4 w-4" /> Código de Inserción
+                                    </h3>
+                                    <p className="text-xs text-slate-500 leading-relaxed">
+                                        Copia y pega este código en cualquier sitio web para empezar a capturar leads con la interfaz de chat de <span className="text-orange-600 font-bold underline">Empanadas CRM</span>.
+                                    </p>
+                                    <div className="relative group">
+                                        <div className="bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                            <pre className="text-slate-300 text-[11px] overflow-x-auto font-mono leading-relaxed">
+                                                {`<iframe 
+  src="${typeof window !== 'undefined' ? window.location.origin : ''}/widget/chat" 
+  width="100%" 
+  height="500px" 
+  frameborder="0"
+  style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+></iframe>`}
+                                            </pre>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const code = `<iframe src="${window.location.origin}/widget/chat" width="100%" height="500px" frameborder="0" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>`;
+                                                navigator.clipboard.writeText(code);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="absolute top-3 right-3 p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-all border border-slate-700"
+                                        >
+                                            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100 uppercase tracking-tight">
+                                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                                        Ideal para: Landings, Secciones de contacto y Blogs.
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-700">Previsualización Interactiva</h3>
+                                    <div className="border border-slate-200 rounded-xl overflow-hidden h-[340px] shadow-inner bg-slate-100 flex items-center justify-center relative group">
+                                        <iframe
+                                            src="/widget/chat"
+                                            className="w-full h-full opacity-100"
+                                            title="Preview"
+                                        />
+                                        <div className="absolute inset-x-0 top-0 h-8 bg-black/5 flex items-center justify-center pointer-events-none">
+                                            <div className="h-1 w-12 bg-slate-300 rounded-full" />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -94,7 +94,7 @@ const BRANDS: Record<string, { name: string; products: string[]; askInterest?: s
     },
     "chococol": {
         name: "ChocoCol",
-        products: ["Barras de Chocolate", "Cacao en Polvo", "Regalos Corporativos", "Catas"]
+        products: ["Agua de Coco", "Aceite de Coco", "Ser Distribuidor", "Otro"]
     },
     "empanadaspaisanas": {
         name: "Empanada Paisana",

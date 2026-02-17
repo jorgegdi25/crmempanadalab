@@ -103,11 +103,11 @@ const BRANDS: Record<string, { name: string; products: string[]; askInterest?: s
     },
     "empanadaslab": {
         name: "Empanadas Lab",
-        products: ["Empanadas Paisanas", "Colbrew", "Chococol", "Puntos de Venta"]
+        products: ["Nuevos Proyectos / Incubación", "Alianzas o Inversión", "Proyectos del Ecosistema", "Otro"]
     },
     "default": {
         name: "Empanadas Lab",
-        products: ["Empanadas Paisanas", "Colbrew", "Chococol", "Puntos de Venta"]
+        products: ["Nuevos Proyectos / Incubación", "Alianzas o Inversión", "Proyectos del Ecosistema", "Otro"]
     }
 };
 

@@ -87,7 +87,7 @@ const DICTIONARY = {
     }
 };
 
-const BRANDS: Record<string, { name: string; products: string[] }> = {
+const BRANDS: Record<string, { name: string; products: string[]; askInterest?: string }> = {
     "colbrew": {
         name: "ColBrew Coffee",
         products: ["Café Tostado", "Bebidas Frías", "Postres", "Catering"]
@@ -98,7 +98,8 @@ const BRANDS: Record<string, { name: string; products: string[] }> = {
     },
     "empanadaspaisanas": {
         name: "Empanada Paisana",
-        products: ["Empanadas", "Combos", "Bebidas", "Congelados"]
+        products: ["Empanadas", "Franquicias"],
+        askInterest: "¿En qué podemos asesorarte el día de hoy?"
     },
     "empanadaslab": {
         name: "Empanadas Lab",
@@ -228,7 +229,11 @@ export default function ChatWidget() {
         } else if (step === "phone") {
             setFormData(prev => ({ ...prev, phone: currentInput }));
             await addBotMessage(t.oneLastThing);
-            await addBotMessage(t.askInterest);
+
+            // Use custom question if available, otherwise default
+            const interestQ = currentBrand.askInterest || t.askInterest;
+            await addBotMessage(interestQ);
+
             setStep("interest");
         }
     };

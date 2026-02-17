@@ -90,7 +90,7 @@ const DICTIONARY = {
 const BRANDS: Record<string, { name: string; products: string[]; askInterest?: string }> = {
     "colbrew": {
         name: "ColBrew Coffee",
-        products: ["Café Tostado", "Bebidas Frías", "Postres", "Catering"]
+        products: ["Elixir Original", "Nitro Infusion", "Flavored Collection", "Quiero ser Distribuidor"]
     },
     "chococol": {
         name: "ChocoCol",

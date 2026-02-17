@@ -98,7 +98,7 @@ const BRANDS: Record<string, { name: string; products: string[]; askInterest?: s
     },
     "empanadaspaisanas": {
         name: "Empanada Paisana",
-        products: ["Empanadas", "Franquicias"],
+        products: ["Empanadas", "Franquicias y Licenciamiento", "Alianzas o Inversión", "Otro"],
         askInterest: "¿En qué podemos asesorarte el día de hoy?"
     },
     "empanadaslab": {

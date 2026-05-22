@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/db';
+import { leads } from '@/lib/schema';
 
-// Usamos el service role key para saltar RLS en la inserción de leads externos si es necesario,
-// o simplemente la anon key si las políticas permiten inserción pública (que no es lo ideal).
-// Por seguridad, usaremos las variables de entorno estándar y validaremos con una API_KEY personalizada.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Por seguridad, usaremos una API_KEY personalizada.
 const API_KEY = process.env.CRM_API_KEY || 'emp_lab_secret_2026';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function OPTIONS() {
     return NextResponse.json({}, {
@@ -35,27 +30,20 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
         }
 
-        const { data, error } = await supabase
-            .from('leads')
-            .insert([
-                {
-                    name,
-                    email,
-                    phone,
-                    source: source || 'Web Externo',
-                    status: 'Nuevo',
-                    product_interest,
-                    notes,
-                    city,
-                    country,
-                    tags: ['Web-Incoming']
-                }
-            ])
-            .select();
+        const newLead = await db.insert(leads).values({
+            name,
+            email,
+            phone,
+            source: source || 'Web Externo',
+            status: 'Nuevo',
+            product_interest,
+            notes,
+            city,
+            country,
+            tags: ['Web-Incoming']
+        }).returning();
 
-        if (error) throw error;
-
-        return NextResponse.json({ success: true, data }, {
+        return NextResponse.json({ success: true, data: newLead }, {
             headers: {
                 'Access-Control-Allow-Origin': '*',
             }

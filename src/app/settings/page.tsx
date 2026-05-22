@@ -5,12 +5,13 @@ import {
     Building2, Users, LogOut, BarChart3, Loader2, TrendingUp,
     MessageSquare, Copy, Code, Check
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { getSettingsStats } from "@/app/actions/settings";
 
 export default function SettingsPage() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [loading, setLoading] = useState(true);
     const [userEmail, setUserEmail] = useState("");
     const [copied, setCopied] = useState(false);
@@ -29,49 +30,22 @@ export default function SettingsPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Get user
-                const { data: { session } } = await supabase.auth.getSession();
                 setUserEmail(session?.user?.email || '');
-
-                // Get all leads for stats
-                const { data: leads } = await supabase.from('leads').select('*');
-                if (leads) {
-                    const total = leads.length;
-                    const closed = leads.filter(l => l.status === 'Cerrado').length;
-                    const newCount = leads.filter(l => l.status === 'Nuevo').length;
-                    const contacted = leads.filter(l => l.status === 'Contactado').length;
-                    const interested = leads.filter(l => l.status === 'Interesado').length;
-                    const discarded = leads.filter(l => l.status === 'Descartado').length;
-
-                    // By source
-                    const sourceMap: Record<string, number> = {};
-                    leads.forEach(l => {
-                        const s = l.source || 'Desconocido';
-                        sourceMap[s] = (sourceMap[s] || 0) + 1;
-                    });
-                    const bySource = Object.entries(sourceMap).map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count);
-
-                    // By product
-                    const productMap: Record<string, number> = {};
-                    leads.forEach(l => {
-                        const p = l.product_interest || 'Sin especificar';
-                        productMap[p] = (productMap[p] || 0) + 1;
-                    });
-                    const byProduct = Object.entries(productMap).map(([product, count]) => ({ product, count })).sort((a, b) => b.count - a.count);
-
-                    setStats({ total, closed, new: newCount, contacted, interested, discarded, bySource, byProduct });
-                }
+                const data = await getSettingsStats();
+                setStats(data);
             } catch (err) {
                 console.error(err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchData();
-    }, []);
+        if (session) {
+            fetchData();
+        }
+    }, [session]);
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
+        await signOut({ redirect: false });
         router.push('/login');
     };
 

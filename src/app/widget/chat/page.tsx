@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Send, User, Phone, ShoppingBag, CheckCircle2, Loader2, Sparkles, MessageSquare, MapPin, Mail, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
@@ -111,7 +111,7 @@ const BRANDS: Record<string, { name: string; products: string[]; askInterest?: s
     }
 };
 
-export default function ChatWidget() {
+function ChatWidgetContent() {
     const searchParams = useSearchParams();
     const sourceParam = searchParams.get("source") || "Chat Widget Web";
 
@@ -487,5 +487,17 @@ export default function ChatWidget() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function ChatWidget() {
+    return (
+        <Suspense fallback={
+            <div className="flex h-screen items-center justify-center bg-slate-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+        }>
+            <ChatWidgetContent />
+        </Suspense>
     );
 }

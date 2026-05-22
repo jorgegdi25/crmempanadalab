@@ -101,13 +101,13 @@ export async function getLeadInteractions(leadId: string) {
 
 export async function addLeadInteraction(leadId: string, type: string, content: string) {
   const session = await getServerSession(authOptions);
-  if (!session) throw new Error("No autorizado");
+  if (!session || !session.user) throw new Error("No autorizado");
 
   const result = await db.insert(interactions).values({
     lead_id: leadId,
     type,
     content,
-    user_id: session.user.id
+    user_id: (session.user as any).id || session.user.email || 'system'
   }).returning();
 
   return { ...result[0], created_at: result[0].createdAt.toISOString() };

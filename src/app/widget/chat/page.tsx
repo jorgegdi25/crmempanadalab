@@ -155,13 +155,24 @@ export default function ChatWidget() {
 
     // Initial message
     useEffect(() => {
+        let isCancelled = false;
         const script = async () => {
             const welcomeMsg = t.welcome.replace("Empanadas Lab", currentBrand.name);
             await addBotMessage(welcomeMsg);
-            await addBotMessage(t.askName);
-            setStep("name");
+            if (isCancelled) return;
+
+            // If user already entered name (step != welcome), don't ask for name
+            setStep(current => {
+                if (current === "welcome") {
+                    addBotMessage(t.askName).then(() => {
+                        setStep(s => s === "welcome" ? "name" : s);
+                    });
+                }
+                return current;
+            });
         };
         script();
+        return () => { isCancelled = true; };
     }, [lang]); // Re-run if lang changes, though usually an iframe reload happens
 
     const addBotMessage = async (text: string) => {
@@ -212,7 +223,7 @@ export default function ChatWidget() {
         setMessages(prev => [...prev, { id: Date.now(), text: currentInput, sender: "user" }]);
         setInputValue("");
 
-        if (step === "name") {
+        if (step === "name" || step === "welcome") {
             setFormData(prev => ({ ...prev, name: currentInput }));
             await addBotMessage(t.niceToMeet.replace("{name}", currentInput));
             await addBotMessage(t.askCountry);
@@ -312,12 +323,13 @@ export default function ChatWidget() {
 
     return (
         <div
-            className="flex flex-col h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden border border-slate-200"
+            className="flex flex-col h-[100dvh] bg-slate-50 font-sans text-slate-900 overflow-hidden border border-slate-200"
             style={{
                 // @ts-ignore
                 "--primary": primaryColor,
                 "--primary-light": primaryColorLight,
-                "--primary-dark": primaryColorDark
+                "--primary-dark": primaryColorDark,
+                paddingBottom: "env(safe-area-inset-bottom, 0px)"
             } as React.CSSProperties}
         >
             {/* Header */}
@@ -424,53 +436,55 @@ export default function ChatWidget() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white border-t border-slate-100">
-                {step !== "success" && step !== "interest" && step !== "country_selection" && step !== "submitting" && (
-                    <form onSubmit={handleSend} className="flex gap-2">
-                        <div className="relative flex-1">
-                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                                {step === "name" ? <User className="h-4 w-4 text-slate-300" /> :
-                                    step === "country_input" ? <MapPin className="h-4 w-4 text-slate-300" /> :
-                                        step === "email" ? <Mail className="h-4 w-4 text-slate-300" /> :
-                                            <Phone className="h-4 w-4 text-slate-300" />}
+            <div className="bg-white border-t border-slate-100 shrink-0">
+                <div className="p-3 px-4">
+                    {step !== "success" && step !== "interest" && step !== "country_selection" && step !== "submitting" && (
+                        <form onSubmit={handleSend} className="flex gap-2">
+                            <div className="relative flex-1">
+                                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                                    {step === "name" ? <User className="h-4 w-4 text-slate-300" /> :
+                                        step === "country_input" ? <MapPin className="h-4 w-4 text-slate-300" /> :
+                                            step === "email" ? <Mail className="h-4 w-4 text-slate-300" /> :
+                                                <Phone className="h-4 w-4 text-slate-300" />}
+                                </div>
+                                <input
+                                    type={step === "phone" ? "tel" : (step === "email" ? "email" : "text")}
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder={
+                                        step === "name" ? t.inputName :
+                                            step === "country_input" ? t.inputCountry :
+                                                step === "email" ? t.inputEmail :
+                                                    t.inputPhone
+                                    }
+                                    className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all"
+                                    autoComplete="off"
+                                />
                             </div>
-                            <input
-                                type={step === "phone" ? "tel" : (step === "email" ? "email" : "text")}
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder={
-                                    step === "name" ? t.inputName :
-                                        step === "country_input" ? t.inputCountry :
-                                            step === "email" ? t.inputEmail :
-                                                t.inputPhone
-                                }
-                                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={!inputValue.trim()}
-                            className="text-white p-3 rounded-xl disabled:opacity-50 transition-colors shadow-lg"
-                            style={{ backgroundColor: "var(--primary)" }}
+                            <button
+                                type="submit"
+                                disabled={!inputValue.trim()}
+                                className="text-white p-3 rounded-xl disabled:opacity-50 transition-colors shadow-lg shrink-0"
+                                style={{ backgroundColor: "var(--primary)" }}
+                            >
+                                <Send className="h-5 w-5" />
+                            </button>
+                        </form>
+                    )}
+
+                    {step === "submitting" && (
+                        <div
+                            className="flex items-center justify-center gap-2 py-3 font-bold text-sm"
+                            style={{ color: "var(--primary)" }}
                         >
-                            <Send className="h-5 w-5" />
-                        </button>
-                    </form>
-                )}
-
-                {step === "submitting" && (
-                    <div
-                        className="flex items-center justify-center gap-2 py-3 font-bold text-sm"
-                        style={{ color: "var(--primary)" }}
-                    >
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {t.sending}
-                    </div>
-                )}
-
-                <div className="text-[9px] text-center text-slate-400 mt-3 font-medium uppercase tracking-widest">
-                    {t.poweredBy} <span className="font-bold" style={{ color: "var(--primary)" }}>Empanadas CRM</span>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {t.sending}
+                        </div>
+                    )}
                 </div>
+                <p className="text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold pb-2">
+                    {t.poweredBy} <span style={{ color: "var(--primary)" }}>Empanadas CRM</span>
+                </p>
             </div>
         </div>
     );

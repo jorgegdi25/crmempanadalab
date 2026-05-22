@@ -332,7 +332,7 @@ export default function LeadsPage() {
                     )}
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="hidden sm:block overflow-x-auto">
                     <table className="w-full text-left">
                         <thead>
                             <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
@@ -481,6 +481,85 @@ export default function LeadsPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="sm:hidden divide-y divide-slate-100">
+                    {loading ? (
+                        <div className="p-8 text-center text-slate-500">
+                            <Loader2 className="h-6 w-6 animate-spin text-orange-600 mx-auto mb-2" />
+                            Cargando leads...
+                        </div>
+                    ) : paginatedLeads.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500">
+                            <p className="font-medium text-slate-400">No hay resultados</p>
+                        </div>
+                    ) : (
+                        paginatedLeads.map((lead) => (
+                            <div
+                                key={lead.id}
+                                className="p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                                onClick={() => handleRowClick(lead)}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 className="font-bold text-slate-900 uppercase tracking-tight">{lead.name}</h3>
+                                        <div className="text-[10px] text-slate-400 flex items-center gap-1 font-bold">
+                                            <MapPin className="h-3 w-3" />
+                                            {lead.city?.toUpperCase() || lead.country?.toUpperCase() || 'Sin ubicación'}
+                                        </div>
+                                    </div>
+                                    <span className={cn(
+                                        "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter",
+                                        statusStyles[lead.status as string] || "bg-slate-100 text-slate-700"
+                                    )}>
+                                        {lead.status}
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mt-3">
+                                    {lead.phone && (
+                                        <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                                            <Phone className="h-3 w-3 text-slate-400" /> {lead.phone}
+                                        </div>
+                                    )}
+                                    {lead.source && (
+                                        <span className={cn(
+                                            "text-[10px] font-bold px-2 py-1 rounded uppercase",
+                                            lead.source === 'Colbrew' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                                                lead.source === 'Chococol' ? 'bg-purple-50 text-purple-700 border border-purple-100' :
+                                                    'bg-orange-50 text-orange-700 border border-orange-100'
+                                        )}>
+                                            {lead.source}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-50">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                        {lead.next_follow_up ? (
+                                            <span className="text-orange-600">Seguimiento: {new Date(lead.next_follow_up).toLocaleDateString()}</span>
+                                        ) : 'Sin seguimiento'}
+                                    </div>
+                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                        <button onClick={() => handleEdit(lead)} className="p-2 text-blue-600 bg-blue-50 rounded-lg">
+                                            <Edit2 className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleWhatsApp(lead.phone)}
+                                            className={cn(
+                                                "p-2 rounded-lg shadow-sm border",
+                                                lead.phone ? "text-green-600 bg-green-50 border-green-100" : "text-slate-300 bg-slate-50 border-slate-100"
+                                            )}
+                                            disabled={!lead.phone}
+                                        >
+                                            <MessageSquare className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 {/* Pagination */}

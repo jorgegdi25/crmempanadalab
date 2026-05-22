@@ -10,7 +10,7 @@ import {
   ChevronRight,
   BarChart3
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getDashboardData } from "./actions/dashboard";
 import { Lead, Interaction } from "@/types";
 
 export default function Home() {
@@ -29,90 +29,11 @@ export default function Home() {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // 1. Get Total Leads
-        const { count: totalCount } = await supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true });
-
-        // 2. Get New Leads Today
-        const { count: newTodayCount } = await supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString());
-
-        // 3. Get Closed Leads
-        const { count: closedCount } = await supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'Cerrado');
-
-        // 4. Calculate Conversion Rate
-        const conversionRate = totalCount ? ((closedCount || 0) / totalCount * 100).toFixed(1) + "%" : "0%";
-
-        setStats({
-          total: totalCount || 0,
-          newToday: newTodayCount || 0,
-          conversion: conversionRate,
-          closed: closedCount || 0
-        });
-
-        // 5. Get Recent Leads
-        const { data: leadsData } = await supabase
-          .from('leads')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (leadsData) setRecentLeads(leadsData as Lead[]);
-
-        // 6. Get Recent Interactions
-        const { data: interactionsData } = await supabase
-          .from('interactions')
-          .select(`*, leads (name)`)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        if (interactionsData) {
-          const mappedInteractions = interactionsData.map((interaction: any) => ({
-            ...interaction,
-            lead_name: interaction.leads?.name || 'Lead Eliminado'
-          }));
-          setRecentActivity(mappedInteractions);
-        }
-
-        // 7. Get Weekly Data for Chart (last 8 weeks)
-        const eightWeeksAgo = new Date();
-        eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
-
-        const { data: weeklyLeads } = await supabase
-          .from('leads')
-          .select('created_at')
-          .gte('created_at', eightWeeksAgo.toISOString())
-          .order('created_at', { ascending: true });
-
-        if (weeklyLeads) {
-          const weeks: { label: string; count: number }[] = [];
-          for (let i = 7; i >= 0; i--) {
-            const weekStart = new Date();
-            weekStart.setDate(weekStart.getDate() - (i * 7));
-            weekStart.setHours(0, 0, 0, 0);
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekEnd.getDate() + 7);
-
-            const count = weeklyLeads.filter(l => {
-              const d = new Date(l.created_at);
-              return d >= weekStart && d < weekEnd;
-            }).length;
-
-            const label = weekStart.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-            weeks.push({ label, count });
-          }
-          setWeeklyData(weeks);
-        }
-
+        const data = await getDashboardData();
+        setStats(data.stats);
+        setRecentLeads(data.recentLeads as any);
+        setRecentActivity(data.recentActivity as any);
+        setWeeklyData(data.weeklyData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -197,7 +118,7 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Leads */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h2 className="font-bold text-slate-900">Leads Recientes</h2>
             <Link href="/leads" className="text-sm text-orange-600 font-semibold hover:text-orange-700 flex items-center gap-1 transition-colors">
               Ver todos <ChevronRight className="h-4 w-4" />
@@ -207,35 +128,35 @@ export default function Home() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                  <th className="px-6 py-3">Nombre</th>
-                  <th className="px-6 py-3">Origen</th>
-                  <th className="px-6 py-3">Estado</th>
-                  <th className="px-6 py-3 text-right">Fecha</th>
+                  <th className="px-4 md:px-6 py-3">Nombre</th>
+                  <th className="hidden sm:table-cell px-6 py-3">Origen</th>
+                  <th className="hidden xs:table-cell px-6 py-3">Estado</th>
+                  <th className="px-4 md:px-6 py-3 text-right">Fecha</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   [...Array(3)].map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={4} className="px-6 py-4">
+                      <td colSpan={4} className="px-4 md:px-6 py-4">
                         <div className="h-4 bg-slate-100 rounded w-full animate-pulse"></div>
                       </td>
                     </tr>
                   ))
                 ) : recentLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-slate-500 text-sm">
+                    <td colSpan={4} className="px-4 md:px-6 py-8 text-center text-slate-500 text-sm">
                       No hay leads recientes.
                     </td>
                   </tr>
                 ) : (
                   recentLeads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-slate-900">{lead.name}</div>
-                        <div className="text-xs text-slate-500">{lead.email || lead.phone || 'Sin contacto'}</div>
+                      <td className="px-4 md:px-6 py-4">
+                        <div className="font-medium text-slate-900 text-sm md:text-base">{lead.name}</div>
+                        <div className="text-[10px] md:text-xs text-slate-500 truncate max-w-[120px] xs:max-w-none">{lead.email || lead.phone || 'Sin contacto'}</div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden sm:table-cell px-6 py-4">
                         <span className={`text-[10px] font-bold px-2 py-1 rounded-full inline-block ${lead.source === 'Colbrew' ? 'bg-blue-100 text-blue-700' :
                           lead.source === 'Chococol' ? 'bg-purple-100 text-purple-700' :
                             'bg-orange-100 text-orange-700'
@@ -243,7 +164,7 @@ export default function Home() {
                           {lead.source || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="hidden xs:table-cell px-6 py-4">
                         <span className={`text-xs font-medium px-2 py-1 rounded ${lead.status === 'Cerrado' ? 'bg-green-100 text-green-700' :
                           lead.status === 'Descartado' ? 'bg-slate-100 text-slate-500' :
                             'bg-blue-50 text-blue-700'
@@ -251,7 +172,7 @@ export default function Home() {
                           {lead.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right text-slate-400 text-xs">
+                      <td className="px-4 md:px-6 py-4 text-right text-slate-400 text-[10px] md:text-xs">
                         {new Date(lead.created_at).toLocaleDateString()}
                       </td>
                     </tr>
@@ -264,10 +185,10 @@ export default function Home() {
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
-          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="px-4 md:px-6 py-4 border-b border-slate-100 bg-slate-50/50">
             <h2 className="font-bold text-slate-900">Actividad Reciente</h2>
           </div>
-          <div className="p-6">
+          <div className="p-4 md:p-6">
             {loading ? (
               <div className="space-y-4">
                 <div className="h-4 bg-slate-100 rounded w-3/4 animate-pulse"></div>
@@ -289,7 +210,7 @@ export default function Home() {
                       <span className="font-semibold">{activity.lead_name}</span>
                       <span className="text-slate-500"> - {activity.type === 'note' ? 'Nota' : activity.type === 'call' ? 'Llamada' : 'Interacción'}</span>
                     </p>
-                    <p className="text-xs text-slate-500 mt-1 truncate" title={activity.content}>
+                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 md:truncate" title={activity.content}>
                       {activity.content || 'Sin detalles'}
                     </p>
                     <p className="text-[10px] text-slate-400 mt-1">

@@ -70,7 +70,7 @@ export default function LeadDetailsModal({ isOpen, onClose, lead, onEdit, onUpda
             <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
 
             {/* Slide-over Panel */}
-            <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="relative w-full sm:max-w-md bg-white shadow-2xl h-full flex flex-col animate-in slide-in-from-right duration-300">
 
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">

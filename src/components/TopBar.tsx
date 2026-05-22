@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Search, Menu, Clock, User, MessageSquare, Phone, FileText, Calendar } from "lucide-react";
+import { Bell, Search, Menu, Clock, User, MessageSquare, Phone, FileText, Calendar, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { Interaction } from "@/types";
@@ -14,6 +14,8 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+    const [pushLoading, setPushLoading] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const fetchNotifications = async () => {
@@ -80,6 +82,15 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     useEffect(() => {
         fetchNotifications();
 
+        // Check push subscription status
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(sub => {
+                    setIsPushSubscribed(!!sub);
+                });
+            });
+        }
+
         // Handle clicks outside dropdown
         const handleClickOutside = (event: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -102,27 +113,73 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     };
 
     return (
-        <header className="h-16 border-b border-slate-200 bg-white px-8 flex items-center justify-between sticky top-0 z-20">
-            <div className="flex items-center gap-4 flex-1">
+        <header className="h-16 border-b border-slate-200 bg-white px-4 md:px-8 flex items-center justify-between sticky top-0 z-20">
+            <div className="flex items-center gap-2 md:gap-4 flex-1">
                 <button
                     onClick={onMenuClick}
-                    className="lg:hidden text-slate-500 hover:text-slate-700"
+                    className="lg:hidden text-slate-500 hover:text-slate-700 p-1"
                 >
                     <Menu className="h-6 w-6" />
                 </button>
-                <div className="relative max-w-md w-full">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <Search className="h-4 w-4 text-slate-400" />
+                <div className="flex items-center">
+                    <button
+                        onClick={async () => {
+                            if (isPushSubscribed) return;
+                            setPushLoading(true);
+                            try {
+                                const reg = await navigator.serviceWorker.ready;
+                                const sub = await reg.pushManager.subscribe({
+                                    userVisibleOnly: true,
+                                    applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+                                });
+
+                                await fetch('/api/notifications/subscribe', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(sub)
+                                });
+
+                                setIsPushSubscribed(true);
+                                alert('¡Suscrito con éxito! Recibirás notificaciones de nuevos leads.');
+                            } catch (err) {
+                                console.error('Error subscribing:', err);
+                                alert('Error al suscribirse. Asegúrate de permitir las notificaciones.');
+                            } finally {
+                                setPushLoading(false);
+                            }
+                        }}
+                        disabled={pushLoading}
+                        className={cn(
+                            "flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all shrink-0",
+                            isPushSubscribed
+                                ? "bg-green-50 text-green-600 border border-green-100"
+                                : "bg-orange-600 text-white hover:bg-orange-700 shadow-md shadow-orange-100 active:scale-95"
+                        )}
+                    >
+                        {pushLoading ? (
+                            <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                        ) : isPushSubscribed ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                            <Bell className="h-3.5 w-3.5" />
+                        )}
+                        <span className="hidden xs:inline">{isPushSubscribed ? 'Alertas ON' : 'Activar Alertas'}</span>
+                        {!isPushSubscribed && <span className="xs:hidden">Alertas</span>}
+                    </button>
+                </div>
+                <div className="relative max-w-md w-full ml-1 md:ml-0">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 md:pl-3 pointer-events-none">
+                        <Search className="h-3.5 w-3.5 md:h-4 w-4 text-slate-400" />
                     </span>
                     <input
                         type="text"
-                        className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-slate-50"
-                        placeholder="Buscar leads, contactos..."
+                        className="block w-full pl-8 md:pl-10 pr-2 md:pr-3 py-1.5 md:py-2 border border-slate-200 rounded-lg text-xs md:text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-slate-50"
+                        placeholder="Buscar..."
                     />
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4 ml-2">
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
@@ -138,7 +195,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                     </button>
 
                     {isNotificationsOpen && (
-                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
+                        <div className="absolute right-[-60px] md:right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
                             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Centro de Avisos</h3>
                                 <button

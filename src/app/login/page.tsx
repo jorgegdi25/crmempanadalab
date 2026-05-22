@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2 } from "lucide-react";
 
@@ -11,23 +11,30 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/");
+    }
+  }, [status, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const res = await signIn("credentials", {
+      redirect: false,
       email,
       password,
     });
 
-    if (error) {
-      console.error("Supabase auth error:", error);
-      setError(error.message);
+    if (res?.error) {
+      setError("Credenciales inválidas. Por favor intenta de nuevo.");
       setLoading(false);
     } else {
-      window.location.href = "/";
+      router.replace("/");
     }
   };
 

@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/db';
+import { leads, pushSubscriptions } from '@/lib/schema';
+import webpush from 'web-push';
 
-// Initialize Supabase client with Service Role Key to bypass RLS
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const CRM_API_KEY = process.env.CRM_API_KEY || 'emp_lab_secret_2026';
+
+let vapidConfigured = false;
+function ensureVapid() {
+    if (vapidConfigured) return;
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    if (publicKey && privateKey) {
+        webpush.setVapidDetails(
+            process.env.VAPID_SUBJECT || 'mailto:info@empanadaslab.com',
+            publicKey,
+            privateKey
+        );
+        vapidConfigured = true;
+    }
+}
 
 export async function OPTIONS() {
     return NextResponse.json({}, {
@@ -18,24 +32,10 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
     try {
-        // 1. Validate API Key
         const apiKey = request.headers.get('x-api-key');
         if (apiKey !== CRM_API_KEY) {
             return NextResponse.json({ error: 'Unauthorized: Invalid API Key' }, { status: 401, headers: { 'Access-Control-Allow-Origin': '*' } });
         }
-
-        // 2. Validate Service Key Availability
-        if (!supabaseServiceKey) {
-            console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
-            return NextResponse.json({ error: 'Server Configuration Error' }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-            }
-        });
 
         const body = await request.json();
         const { name, phone, email, product_interest, source, notes, country, city } = body;
@@ -44,36 +44,50 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
         }
 
-        const { data, error } = await supabase
-            .from('leads')
-            .insert([
-                {
-                    name,
-                    phone: phone || null,
-                    email: email || null,
-                    product_interest: product_interest || 'Chat Widget',
-                    source: source || 'Widget Externo',
-                    status: 'Nuevo',
-                    notes: notes || 'Lead capturado vía chat widget.',
-                    country: country || null,
-                    city: city || null,
-                    tags: ['widget']
-                }
-            ])
-            .select();
+        const newLeadRaw = await db.insert(leads).values({
+            name,
+            phone: phone || null,
+            email: email || null,
+            product_interest: product_interest || 'Chat Widget',
+            source: source || 'Widget Externo',
+            status: 'Nuevo',
+            notes: notes || 'Lead capturado vía chat widget.',
+            country: country || null,
+            city: city || null,
+            tags: ['widget']
+        }).returning();
 
-        if (error) {
-            console.error('Error inserting external lead:', error);
-            return NextResponse.json({ error: error.message }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
+        const newLead = newLeadRaw[0];
+
+        ensureVapid();
+        try {
+            const bscriptions = await db.select({ subscription_data: pushSubscriptions.subscription_data }).from(pushSubscriptions);
+
+            if (bscriptions && bscriptions.length > 0) {
+                const payload = JSON.stringify({
+                    title: `¡Nuevo Lead: ${name}! 🥟`,
+                    body: `${product_interest || 'Interés general'} de ${source || 'Web'}`,
+                    url: `/`
+                });
+
+                const pushPromises = bscriptions.map(sub =>
+                    webpush.sendNotification(sub.subscription_data as any, payload)
+                        .catch((err: any) => console.error('Error sending push:', err))
+                );
+
+                await Promise.all(pushPromises);
+            }
+        } catch (pushError) {
+            console.error('Push notification loop error:', pushError);
         }
 
-        return NextResponse.json({ success: true, lead: data[0] }, {
+        return NextResponse.json({ success: true, lead: newLead }, {
             status: 201,
             headers: { 'Access-Control-Allow-Origin': '*' }
         });
 
     } catch (error: any) {
-        console.error('Unexpected error in external lead API:', error);
+        console.error('External API error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 }

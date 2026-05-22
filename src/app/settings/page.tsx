@@ -6,6 +6,7 @@ import {
     MessageSquare, Copy, Code, Check
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {

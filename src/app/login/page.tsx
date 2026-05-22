@@ -66,7 +66,7 @@ export default function LoginPage() {
                 <input
                   type="email"
                   required
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 transition-all"
+                  className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 transition-all"
                   placeholder="admin@empanadas.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -83,7 +83,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
-                  className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 transition-all"
+                  className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 transition-all"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

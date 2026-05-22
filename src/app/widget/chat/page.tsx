@@ -121,7 +121,18 @@ function ChatWidgetContent() {
 
     const primaryColorParam = searchParams.get("primary");
     const langParam = searchParams.get("lang") as Lang;
-    const lang = (langParam === "en" ? "en" : "es");
+    const [lang, setLang] = useState<Lang>("es");
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        if (langParam === "en" || langParam === "es") {
+            setLang(langParam);
+        } else if (typeof window !== "undefined") {
+            setLang(navigator.language.startsWith("en") ? "en" : "es");
+        }
+        setMounted(true);
+    }, [langParam]);
+
     const t = DICTIONARY[lang];
 
     // Validate hex color or use default orange
@@ -155,6 +166,7 @@ function ChatWidgetContent() {
 
     // Initial message
     useEffect(() => {
+        if (!mounted) return;
         let isCancelled = false;
         const script = async () => {
             const welcomeMsg = t.welcome.replace("Empanadas Lab", currentBrand.name);
@@ -173,7 +185,7 @@ function ChatWidgetContent() {
         };
         script();
         return () => { isCancelled = true; };
-    }, [lang]); // Re-run if lang changes, though usually an iframe reload happens
+    }, [lang, mounted]); // Re-run if lang changes or component mounts
 
     const addBotMessage = async (text: string) => {
         setIsTyping(true);

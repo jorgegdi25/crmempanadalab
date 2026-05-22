@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Bell, Search, Menu, Clock, User, MessageSquare, Phone, FileText, Calendar, CheckCircle2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getTopBarNotifications } from "@/app/actions/leads";
 import { cn } from "@/lib/utils";
 import { Interaction } from "@/types";
 
@@ -21,57 +21,8 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            // Fetch interactions
-            const { data: interactionsData, error: intError } = await supabase
-                .from('interactions')
-                .select(`
-                    *,
-                    leads (name)
-                `)
-                .order('created_at', { ascending: false })
-                .limit(5);
-
-            if (intError) throw intError;
-
-            // Fetch upcoming follow-ups (today)
-            const today = new Date();
-            today.setHours(23, 59, 59, 999);
-
-            const { data: followUpsData, error: fupError } = await supabase
-                .from('leads')
-                .select('id, name, next_follow_up, product_interest')
-                .not('next_follow_up', 'is', null)
-                .lte('next_follow_up', today.toISOString())
-                .order('next_follow_up', { ascending: true })
-                .limit(5);
-
-            if (fupError) throw fupError;
-
-            // Map and combine
-            const interactionNotifs = (interactionsData || []).map((item: any) => ({
-                id: item.id,
-                type: item.type,
-                content: item.content,
-                created_at: item.created_at,
-                lead_name: item.leads?.name || 'Lead desconocido',
-                isFollowUp: false
-            }));
-
-            const followUpNotifs = (followUpsData || []).map((item: any) => ({
-                id: `fup-${item.id}`,
-                type: 'followup',
-                content: `Seguimiento pendiente: ${item.product_interest || 'General'}`,
-                created_at: item.next_follow_up,
-                lead_name: item.name,
-                isFollowUp: true
-            }));
-
-            // Combine and sort by date (most recent first)
-            const combined = [...followUpNotifs, ...interactionNotifs].sort((a, b) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-
-            setNotifications(combined.slice(0, 8) as any);
+            const data = await getTopBarNotifications();
+            setNotifications(data as any[]);
         } catch (error) {
             console.error('Error fetching notifications:', error);
         } finally {

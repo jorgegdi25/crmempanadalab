@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Loader2, Calendar, MessageSquare, User, Tag, Info } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { createLead, updateLead } from "@/app/actions/leads";
 import { Lead } from "@/types";
 
 interface NewLeadModalProps {
@@ -76,14 +76,9 @@ export default function NewLeadModal({ isOpen, onClose, onSuccess, leadToEdit }:
         setLoading(true);
 
         try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (!session) {
-                alert('No hay sesión activa. Por favor inicia sesión nuevamente.');
-                setLoading(false);
-                return;
-            }
-
             console.log('Saving Lead Data:', formData);
+
+            const nextFollowUp = formData.next_follow_up ? new Date(formData.next_follow_up).toISOString() : null;
 
             if (leadToEdit) {
                 const dataToUpdate = {
@@ -97,26 +92,19 @@ export default function NewLeadModal({ isOpen, onClose, onSuccess, leadToEdit }:
                     city: formData.city,
                     tags: formData.tags,
                     product_interest: formData.product_interest,
-                    next_follow_up: formData.next_follow_up || null,
+                    next_follow_up: nextFollowUp ? new Date(nextFollowUp) : null,
                     follow_up_method: formData.follow_up_method
                 };
-                const { error } = await supabase
-                    .from('leads')
-                    .update(dataToUpdate)
-                    .eq('id', leadToEdit.id);
-
-                if (error) throw error;
+                
+                await updateLead(leadToEdit.id, dataToUpdate);
             } else {
                 const dataToInsert = {
                     ...formData,
-                    next_follow_up: formData.next_follow_up || null,
+                    next_follow_up: nextFollowUp ? new Date(nextFollowUp) : null,
                     tags: formData.tags || []
                 };
-                const { error } = await supabase
-                    .from('leads')
-                    .insert([dataToInsert]);
-
-                if (error) throw error;
+                
+                await createLead(dataToInsert);
             }
 
             onSuccess();

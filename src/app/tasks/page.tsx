@@ -15,7 +15,7 @@ import {
     Check,
     Edit2
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getTasks, clearLeadNextFollowUp } from "@/app/actions/leads";
 import { Lead } from "@/types";
 import { cn } from "@/lib/utils";
 import LeadDetailsModal from "@/components/LeadDetailsModal";
@@ -36,14 +36,8 @@ export default function TasksPage() {
         setLoading(true);
         setError(null);
         try {
-            const { data, error } = await supabase
-                .from('leads')
-                .select('*')
-                .not('next_follow_up', 'is', null)
-                .order('next_follow_up', { ascending: true });
-
-            if (error) throw error;
-            setLeads(data || []);
+            const data = await getTasks();
+            setLeads(data as Lead[] || []);
         } catch (err: any) {
             console.error('Error in fetchTasks:', err);
             setError(err.message || 'Error desconocido al cargar tareas');
@@ -70,12 +64,7 @@ export default function TasksPage() {
     const handleCompleteTask = async (e: React.MouseEvent, lead: Lead) => {
         e.stopPropagation();
         try {
-            const { error } = await supabase
-                .from('leads')
-                .update({ next_follow_up: null })
-                .eq('id', lead.id);
-
-            if (error) throw error;
+            await clearLeadNextFollowUp(lead.id);
             fetchTasks();
         } catch (err: any) {
             alert(`Error: ${err.message}`);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { X, Send, Phone, Mail, Calendar, User, Clock, Loader2, Edit, MessageSquare } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getLeadInteractions, addLeadInteraction } from "@/app/actions/leads";
 import { Lead, Interaction } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -23,14 +23,11 @@ export default function LeadDetailsModal({ isOpen, onClose, lead, onEdit, onUpda
     const fetchInteractions = useCallback(async () => {
         if (!lead) return;
         setLoading(true);
-        const { data, error } = await supabase
-            .from('interactions')
-            .select('*')
-            .eq('lead_id', lead.id)
-            .order('created_at', { ascending: false });
-
-        if (!error && data) {
-            setInteractions(data as Interaction[]);
+        try {
+            const data = await getLeadInteractions(lead.id);
+            setInteractions(data as any[]);
+        } catch (error) {
+            console.error(error);
         }
         setLoading(false);
     }, [lead]);
@@ -46,18 +43,13 @@ export default function LeadDetailsModal({ isOpen, onClose, lead, onEdit, onUpda
         if (!note.trim() || !lead) return;
 
         setSavingNote(true);
-        const { error } = await supabase
-            .from('interactions')
-            .insert([{
-                lead_id: lead.id,
-                type: 'note',
-                content: note
-            }]);
-
-        if (!error) {
+        try {
+            await addLeadInteraction(lead.id, 'note', note);
             setNote("");
             fetchInteractions();
             if (onUpdate) onUpdate();
+        } catch (error) {
+            console.error(error);
         }
         setSavingNote(false);
     };

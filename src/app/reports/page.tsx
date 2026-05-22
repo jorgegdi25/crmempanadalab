@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { BarChart3, Loader2, PieChart, TrendingUp } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getReportLeads } from "@/app/actions/leads";
 import { cn } from "@/lib/utils";
 
 interface LeadData {
@@ -20,10 +20,8 @@ export default function ReportsPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const { data } = await supabase
-                    .from('leads')
-                    .select('status, source, product_interest, created_at');
-                setLeads((data as LeadData[]) || []);
+                const data = await getReportLeads();
+                setLeads(data);
             } catch (err) {
                 console.error(err);
             } finally {

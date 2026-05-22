@@ -19,7 +19,7 @@ import {
     Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
+import { getAllLeads, deleteLead } from "@/app/actions/leads";
 import NewLeadModal from "@/components/NewLeadModal";
 import LeadDetailsModal from "@/components/LeadDetailsModal";
 import { Lead } from "@/types";
@@ -54,16 +54,8 @@ export default function LeadsPage() {
     const fetchLeads = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('leads')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                console.error('Error fetching leads:', error);
-            } else {
-                setLeads(data as Lead[] || []);
-            }
+            const data = await getAllLeads();
+            setLeads(data as Lead[] || []);
         } catch (error) {
             console.error('Unexpected error fetching leads:', error);
         } finally {
@@ -106,14 +98,9 @@ export default function LeadsPage() {
         if (window.confirm('¿Estás seguro de que deseas eliminar este lead? Esta acción no se puede deshacer.')) {
             setLoading(true);
             try {
-                const { error, count } = await supabase
-                    .from('leads')
-                    .delete({ count: 'exact' })
-                    .eq('id', lead.id);
+                const success = await deleteLead(lead.id);
 
-                if (error) {
-                    alert(`Error al eliminar: ${error.message || 'Revisa la consola'}`);
-                } else if (count === 0) {
+                if (!success) {
                     alert('No se pudo eliminar el lead.');
                 } else {
                     fetchLeads();

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, MessageSquare, Phone, Clock, ChevronRight } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { getAllLeads, updateLeadStatus } from "@/app/actions/leads";
 import { Lead } from "@/types";
 import { cn } from "@/lib/utils";
 import LeadDetailsModal from "@/components/LeadDetailsModal";
@@ -27,13 +27,8 @@ export default function PipelinePage() {
     const fetchLeads = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('leads')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setLeads(data || []);
+            const data = await getAllLeads();
+            setLeads(data as Lead[] || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -45,11 +40,7 @@ export default function PipelinePage() {
 
     const handleMoveStatus = async (lead: Lead, newStatus: string) => {
         try {
-            const { error } = await supabase
-                .from('leads')
-                .update({ status: newStatus })
-                .eq('id', lead.id);
-            if (error) throw error;
+            await updateLeadStatus(lead.id, newStatus);
             fetchLeads();
         } catch (err: any) {
             alert(`Error: ${err.message}`);
